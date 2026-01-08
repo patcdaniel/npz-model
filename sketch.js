@@ -1,5 +1,5 @@
-// NPZD Model Parameters
-let params = {
+// NPZD Model Parameters (defaults)
+let defaultParams = {
     vm: 1.5,      // Maximum uptake rate
     kn: 0.5,      // Half-saturation constant
     i0: 1.0,      // Light intensity
@@ -12,6 +12,9 @@ let params = {
     r: 0.05,      // Phytoplankton sinking
     phi: 0.1      // Detritus remineralization
 };
+
+// Current parameters
+let params = {...defaultParams};
 
 // State variables
 let N = 10.0;  // Nutrients
@@ -45,8 +48,11 @@ let maxHistoryLength = 1000;
 
 // Canvas dimensions
 let canvasWidth = 1200;
-let canvasHeight = 500;
+let canvasHeight = 800;
 let margin = { top: 40, right: 40, bottom: 60, left: 60 };
+let mainPlotHeight = 450;  // Height of main plot
+let functionalPlotHeight = 250;  // Height of functional form plots
+let functionalPlotY = mainPlotHeight + 50;  // Y position where functional plots start
 
 function setup() {
     let canvas = createCanvas(canvasWidth, canvasHeight);
@@ -100,6 +106,9 @@ function draw() {
     } else {
         drawFlowDiagram();
     }
+
+    // Draw functional form plots below
+    drawFunctionalForms();
 }
 
 // Light limitation function (simple linear for now)
@@ -178,7 +187,7 @@ function drawTimeSeries() {
 
     // Calculate plot dimensions
     let plotWidth = canvasWidth - margin.left - margin.right;
-    let plotHeight = canvasHeight - margin.top - margin.bottom;
+    let plotHeight = mainPlotHeight - margin.top - margin.bottom;
 
     // Find min/max for scaling
     let allValues = [...history.N, ...history.P, ...history.Z, ...history.D];
@@ -191,13 +200,13 @@ function drawTimeSeries() {
     // Draw axes
     stroke(200);
     strokeWeight(1);
-    line(margin.left, margin.top, margin.left, canvasHeight - margin.bottom);
-    line(margin.left, canvasHeight - margin.bottom, canvasWidth - margin.right, canvasHeight - margin.bottom);
+    line(margin.left, margin.top, margin.left, mainPlotHeight - margin.bottom);
+    line(margin.left, mainPlotHeight - margin.bottom, canvasWidth - margin.right, mainPlotHeight - margin.bottom);
 
     // Draw grid
     stroke(240);
     for (let i = 0; i <= 5; i++) {
-        let y = map(i, 0, 5, canvasHeight - margin.bottom, margin.top);
+        let y = map(i, 0, 5, mainPlotHeight - margin.bottom, margin.top);
         line(margin.left, y, canvasWidth - margin.right, y);
     }
 
@@ -212,10 +221,10 @@ function drawTimeSeries() {
     noStroke();
     textAlign(CENTER);
     textSize(14);
-    text('Time', canvasWidth / 2, canvasHeight - 20);
+    text('Time', canvasWidth / 2, mainPlotHeight - 20);
 
     push();
-    translate(15, canvasHeight / 2);
+    translate(15, mainPlotHeight / 2);
     rotate(-PI / 2);
     text('Concentration', 0, 0);
     pop();
@@ -229,7 +238,7 @@ function drawTimeSeries() {
     textSize(11);
     textAlign(RIGHT);
     for (let i = 0; i <= 5; i++) {
-        let y = map(i, 0, 5, canvasHeight - margin.bottom, margin.top);
+        let y = map(i, 0, 5, mainPlotHeight - margin.bottom, margin.top);
         let val = map(i, 0, 5, minVal, maxVal);
         text(val.toFixed(2), margin.left - 10, y + 4);
     }
@@ -239,7 +248,7 @@ function drawTimeSeries() {
     for (let i = 0; i <= 5; i++) {
         let x = map(i, 0, 5, margin.left, canvasWidth - margin.right);
         let val = map(i, 0, 5, minTime, maxTime);
-        text(val.toFixed(1), x, canvasHeight - margin.bottom + 20);
+        text(val.toFixed(1), x, mainPlotHeight - margin.bottom + 20);
     }
 
     // Draw legend
@@ -254,7 +263,7 @@ function drawLine(timeData, valueData, minTime, maxTime, minVal, maxVal, col, la
     beginShape();
     for (let i = 0; i < timeData.length; i++) {
         let x = map(timeData[i], minTime, maxTime, margin.left, canvasWidth - margin.right);
-        let y = map(valueData[i], minVal, maxVal, canvasHeight - margin.bottom, margin.top);
+        let y = map(valueData[i], minVal, maxVal, mainPlotHeight - margin.bottom, margin.top);
         vertex(x, y);
     }
     endShape();
@@ -307,7 +316,7 @@ function drawLegend() {
 
 function displayCurrentValues() {
     let x = margin.left + 20;
-    let y = canvasHeight - margin.bottom - 80;
+    let y = mainPlotHeight - margin.bottom - 80;
 
     fill(255, 255, 255, 200);
     stroke(200);
@@ -340,8 +349,8 @@ function drawFlowDiagram() {
 
     // Node positions (in a roughly square layout)
     let centerX = canvasWidth / 2;
-    let centerY = canvasHeight / 2;
-    let spacing = 200;
+    let centerY = mainPlotHeight / 2;
+    let spacing = 150;
 
     let positions = {
         N: { x: centerX - spacing, y: centerY - spacing },  // Top left
@@ -470,7 +479,7 @@ function drawFlowArrow(from, to, flowRate, maxFlow, label) {
 
 function displayFlowInfo() {
     let x = 20;
-    let y = canvasHeight - 120;
+    let y = mainPlotHeight - 120;
 
     fill(255, 255, 255, 230);
     stroke(200);
@@ -485,6 +494,204 @@ function displayFlowInfo() {
     text(`Total mass: ${(N + P + Z + D).toFixed(4)}`, x, y + 20);
     text(`Arrow thickness = flow rate`, x, y + 40);
     text(`Circle diameter = concentration`, x, y + 60);
+}
+
+function drawFunctionalForms() {
+    // Plot dimensions
+    let plotWidth = (canvasWidth - 3 * margin.left) / 2;
+    let plotHeight = functionalPlotHeight - margin.top - margin.bottom;
+
+    // Left plot: Michaelis-Menten
+    let mmX = margin.left;
+    let mmY = functionalPlotY;
+    drawMichaelisMenten(mmX, mmY, plotWidth, plotHeight);
+
+    // Right plot: Ivlev grazing
+    let ivlevX = canvasWidth / 2 + margin.left / 2;
+    let ivlevY = functionalPlotY;
+    drawIvlevGrazing(ivlevX, ivlevY, plotWidth, plotHeight);
+}
+
+function drawMichaelisMenten(x0, y0, w, h) {
+    // Title
+    fill(0);
+    noStroke();
+    textAlign(CENTER);
+    textSize(14);
+    text('Michaelis-Menten Nutrient Limitation', x0 + w/2, y0 - 5);
+
+    // Axes
+    stroke(200);
+    strokeWeight(1);
+    line(x0, y0, x0, y0 + h);
+    line(x0, y0 + h, x0 + w, y0 + h);
+
+    // Grid
+    stroke(240);
+    for (let i = 0; i <= 5; i++) {
+        let y = map(i, 0, 5, y0 + h, y0);
+        line(x0, y, x0 + w, y);
+    }
+
+    // Plot the function N/(K_N + N)
+    let numPoints = 100;
+    let maxN = 5.0;  // Maximum N to plot
+
+    stroke(0, 100, 200);
+    strokeWeight(2);
+    noFill();
+    beginShape();
+    for (let i = 0; i <= numPoints; i++) {
+        let n = map(i, 0, numPoints, 0, maxN);
+        let uptakeFactor = n / (params.kn + n);
+        let px = map(n, 0, maxN, x0, x0 + w);
+        let py = map(uptakeFactor, 0, 1, y0 + h, y0);
+        vertex(px, py);
+    }
+    endShape();
+
+    // Mark current K_N on the plot
+    let kn_x = map(params.kn, 0, maxN, x0, x0 + w);
+    let kn_y = map(0.5, 0, 1, y0 + h, y0);  // At K_N, uptake = 0.5
+    fill(200, 0, 0);
+    noStroke();
+    circle(kn_x, kn_y, 8);
+
+    // Mark current N on the plot
+    let currentUptake = N / (params.kn + N);
+    let n_x = map(N, 0, maxN, x0, x0 + w);
+    let n_y = map(currentUptake, 0, 1, y0 + h, y0);
+    fill(0, 200, 0);
+    circle(n_x, n_y, 8);
+
+    // Axes labels
+    fill(0);
+    textSize(12);
+    textAlign(CENTER);
+    text('N (Nutrient)', x0 + w/2, y0 + h + 25);
+
+    push();
+    translate(x0 - 35, y0 + h/2);
+    rotate(-PI / 2);
+    text('N/(K_N + N)', 0, 0);
+    pop();
+
+    // Y-axis values
+    textSize(10);
+    textAlign(RIGHT);
+    for (let i = 0; i <= 5; i++) {
+        let val = i / 5.0;
+        let y = map(val, 0, 1, y0 + h, y0);
+        text(val.toFixed(1), x0 - 5, y + 3);
+    }
+
+    // X-axis values
+    textAlign(CENTER);
+    for (let i = 0; i <= 5; i++) {
+        let val = map(i, 0, 5, 0, maxN);
+        let x = map(i, 0, 5, x0, x0 + w);
+        text(val.toFixed(1), x, y0 + h + 15);
+    }
+
+    // Legend
+    textSize(10);
+    textAlign(LEFT);
+    fill(200, 0, 0);
+    circle(x0 + 10, y0 + 15, 8);
+    fill(0);
+    text(`K_N = ${params.kn.toFixed(2)}`, x0 + 20, y0 + 18);
+
+    fill(0, 200, 0);
+    circle(x0 + 10, y0 + 30, 8);
+    fill(0);
+    text(`N = ${N.toFixed(2)}`, x0 + 20, y0 + 33);
+}
+
+function drawIvlevGrazing(x0, y0, w, h) {
+    // Title
+    fill(0);
+    noStroke();
+    textAlign(CENTER);
+    textSize(14);
+    text('Ivlev Grazing Function', x0 + w/2, y0 - 5);
+
+    // Axes
+    stroke(200);
+    strokeWeight(1);
+    line(x0, y0, x0, y0 + h);
+    line(x0, y0 + h, x0 + w, y0 + h);
+
+    // Grid
+    stroke(240);
+    for (let i = 0; i <= 5; i++) {
+        let y = map(i, 0, 5, y0 + h, y0);
+        line(x0, y, x0 + w, y);
+    }
+
+    // Plot the function 1 - e^(-λP)
+    let numPoints = 100;
+    let maxP = 5.0;  // Maximum P to plot
+
+    stroke(200, 0, 0);
+    strokeWeight(2);
+    noFill();
+    beginShape();
+    for (let i = 0; i <= numPoints; i++) {
+        let p = map(i, 0, numPoints, 0, maxP);
+        let grazingFactor = 1 - Math.exp(-params.lambda * p);
+        let px = map(p, 0, maxP, x0, x0 + w);
+        let py = map(grazingFactor, 0, 1, y0 + h, y0);
+        vertex(px, py);
+    }
+    endShape();
+
+    // Mark current P on the plot
+    let currentGrazing = 1 - Math.exp(-params.lambda * P);
+    let p_x = map(P, 0, maxP, x0, x0 + w);
+    let p_y = map(currentGrazing, 0, 1, y0 + h, y0);
+    fill(0, 200, 0);
+    noStroke();
+    circle(p_x, p_y, 8);
+
+    // Axes labels
+    fill(0);
+    textSize(12);
+    textAlign(CENTER);
+    text('P (Phytoplankton)', x0 + w/2, y0 + h + 25);
+
+    push();
+    translate(x0 - 35, y0 + h/2);
+    rotate(-PI / 2);
+    text('1 - e^(-λP)', 0, 0);
+    pop();
+
+    // Y-axis values
+    textSize(10);
+    textAlign(RIGHT);
+    for (let i = 0; i <= 5; i++) {
+        let val = i / 5.0;
+        let y = map(val, 0, 1, y0 + h, y0);
+        text(val.toFixed(1), x0 - 5, y + 3);
+    }
+
+    // X-axis values
+    textAlign(CENTER);
+    for (let i = 0; i <= 5; i++) {
+        let val = map(i, 0, 5, 0, maxP);
+        let x = map(i, 0, 5, x0, x0 + w);
+        text(val.toFixed(1), x, y0 + h + 15);
+    }
+
+    // Legend
+    textSize(10);
+    textAlign(LEFT);
+    fill(0, 200, 0);
+    circle(x0 + 10, y0 + 15, 8);
+    fill(0);
+    text(`P = ${P.toFixed(2)}`, x0 + 20, y0 + 18);
+
+    fill(0);
+    text(`λ = ${params.lambda.toFixed(2)}`, x0 + 10, y0 + 33);
 }
 
 function setupControls() {
@@ -530,6 +737,22 @@ function resetSimulation() {
     history.D = [D];
 
     running = false;
+
+    // Reset parameters to defaults
+    params = {...defaultParams};
+
+    // Reset all sliders and their displays
+    const controls = ['vm', 'kn', 'i0', 'rm', 'lambda', 'alpha', 'beta', 'epsilon', 'g', 'r', 'phi'];
+
+    controls.forEach(param => {
+        let slider = document.getElementById(param);
+        let display = document.getElementById(param + '-val');
+
+        if (slider && display) {
+            slider.value = defaultParams[param];
+            display.textContent = defaultParams[param].toFixed(2);
+        }
+    });
 }
 
 function setSpeed(multiplier) {
