@@ -136,9 +136,12 @@
 </head>
 <body>
     <div id="container">
-        <h1>NPZD Model Simulator</h1>
-        <p>Interactive simulation of Nutrient-Phytoplankton-Zooplankton-Detritus dynamics</p>
+        <h1>Interactive simulation of Nutrient-Phytoplankton-Zooplankton-Detritus dynamics</h1>
+        <p>
+            Based on:
+            <a href="https://academic.oup.com/plankt/article/23/4/389/1436426">Edwards, A. M. Adding detritus to a nutrient – phytoplankton – zooplankton model : a dynamical-systems approach. J. Plankton Res. 23, 389–413 (2001).</a>
 
+        </p>
         <div class="info">
             <h3>Model Equations</h3>
             <p><strong>dN/dt</strong> = -V<sub>m</sub>(N/(K<sub>N</sub>+N))f(I<sub>0</sub>)P + αR<sub>m</sub>(1-e<sup>-λP</sup>)Z + εP + gZ + φD</p>
@@ -192,7 +195,12 @@
                 <strong>1-e<sup>-λP</sup></strong> = Ivlev grazing function (saturation at high P)
             </p>
         </div>
-
+        <div class="info" style="background-color: #edededed; border-left-color: #d0003b;">
+            <h3 style="color: #333;">How to Run:</h3>
+            <p>Start by pushing the <strong>Start/Pause</strong> button below.</p>
+            <p>You can toggle between the <strong>Flow Diagram View</strong> and the <strong>Time Series View</strong>.</p>
+            <p>You can increase the timestep by selecting a <strong>Speed Multiplier</strong></p>
+        </div>
         <div id="controls">
             <!-- Biological Parameters -->
             <div class="control-group">
